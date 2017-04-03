@@ -1,44 +1,62 @@
 sudo: required
 dist: trusty
 
-language: python
+language: dart
 
-python:
-  - "3.4"
-  - "3.5"
+env:
+  # The coveralls secure REPO_TOKEN
+  secure: "ZjuK9HErDv+RKgBtPubu4KrjmrzPhBM4/ukpFJfRH+mUvD4dquqZOjYBN5nI/TnyaSEeH/4xAEuh86dbXmkKjFL43eAZxqn62DOFLF8yjjU2ROjYART/92u0B8IRtt74Ibarbi1aG1hUK/KYR3IOuQyuq0lPNxpF+ViHAfXanV5UREMOZAn35fbvS1Sz/fy3PcKwW0yO9pu3kizu8ZFW0HKgHVd6pMKljGFXzi1vDPqMWrFJLZwORoxLm7s06G6+oZUZBbwV0AVGo6EEGd/2PtmB1sDKWy72JV6avTan2zOlYR20x0SAxnc3XwFnZ/t+LdEpzppfaPLxMVJBZxtbOyz31134Ej6YmB/NVUvk9shPNrANJH7n4oM+nyG//czOIfHatS+ycRgl1knxFTxk7KGb1SIFlBKCmL1ew7vlI4kinnNTFY1bYj95jxqzlYQbrOhJy7BlTJbwlFaUwg5Te1OQMx3pLMyB07FAEVbVhdgBCZpuJcHwSeCQrKVNboDpo1vpALYYOlnlxiN1OQJ4qhoLubuls8nARG8I3liI4TOvLsO9OAG8Lh8CQB7g8lsbWzn8F22sT7BuNwOoXumvvGUhlj0T/Km9LUY17iMHYoEhvO1Uss3pephN+pnpr7kfcf4VoBnLqsZdtgFxwuGr2rkVMXmUKdHtCUn/KpGwvKo="
+ 
+before_install:
+  # 2 lines of workaround as proposed here: https://github.com/travis-ci/travis-ci/issues/6928#issuecomment-264227708
+  - source /opt/jdk_switcher/jdk_switcher.sh
+  - jdk_switcher use oraclejdk8
 
 install:
-  - travis_retry pip install -r backend/requirements.txt
-  - travis_retry pip install coveralls
-  - travis_retry pip install flake8
-  - sudo apt-get update
-  - sudo apt-get install apt-transport-https
-  - sudo sh -c 'curl https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -'
-  - sudo sh -c 'curl https://storage.googleapis.com/download.dartlang.org/linux/debian/dart_stable.list > /etc/apt/sources.list.d/dart_stable.list'
-  - sudo apt-get update
-  - sudo apt-get install dart
-  - (cd frontend && /usr/lib/dart/bin/pub get)
-  - (cd e2e_tests && npm install protractor)
-  - (cd e2e_tests && node_modules/protractor/bin/webdriver-manager update)
-  - (cd e2e_tests && npm install jasmine-spec-reporter --save-dev)
+  # Travis specific install
+  # Install Dartium
+  - wget https://storage.googleapis.com/dart-archive/channels/stable/release/latest/dartium/dartium-linux-x64-release.zip
+  - unzip dartium-linux-x64-release.zip
+  - rm dartium-linux-x64-release.zip
+  - mv `echo dartium-*-stable-*`/{chrome,dartium}
+  - export PATH="${PWD%/}/$(echo dartium-*-stable-*):$PATH"
+  # General install
+  - (cd frontend && make install)
+  # Prepare e2e test tools
+  #- (cd e2e_tests  && make install)
 
 before_script:
-  - (cd backend && python manage.py migrate)
-  - (cd backend && python setup.py flake8)
-  - (cd backend && python manage.py runserver > django-server.log 2>&1 &)
+  # Static analysis
+  - (cd frontend && make lint)
+  - (cd frontend && make style)
+  # e2e test preparation
   - export DISPLAY=:99.0
   - sh -e /etc/init.d/xvfb start
-  - (cd frontend && /usr/lib/dart/bin/pub serve > angular-server.log 2>&1 &)
-  - (cd e2e_tests && node_modules/protractor/bin/webdriver-manager start > webdriver.log 2>&1 &)
+  - (cd frontend  && make run > angular-server.log 2>&1 &)
+  # necessary for pub server to become available
+  - (cd frontend  && timeout 600 grep -q 'Build completed' <(tail -f angular-server.log))
 
 script:
-  - (cd backend && coverage run setup.py test)
-  - (cd e2e_tests && node_modules/protractor/bin/protractor conf.js)
+  - (cd frontend  && make test)
+  - (cd frontend  && make coveralls)
+  - (cd frontend  && make dtests)
+  #- (cd e2e_tests && make run > webdriver.log 2>&1 &)
+  # necessary for webdriver to become available
+  # - sleep 3 && echo sleep done
+  #- (cd e2e_tests && make tests)
+  - (cd frontend && cat angular-server.log)
+  #- (cd e2e_tests && cat webdriver.log)
 
 after_success:
-  - (cd backend && coveralls)
+  - (cd frontend && make build)
 
-after_script:
-  - (cd backend && cat django-server.log)
-  - (cd frontend && cat angular-server.log)
-  - (cd e2e_tests && cat webdriver.log)
+before_deploy:
+  - (cd functions && npm install)
+
+deploy:
+  provider: firebase
+  token:
+    secure: "cxPUVZpp+6AqIw55ANPotUhM/QLEv0xYusxKr0fnCvkCdO1VqPXGhraUtP38LPQB8U3+9PkJCf0/ZBNlUF1TT1cZaDnaBMLkUugtFuuzmy6DavFL/2vJsbCjpC5YDEgKE05BFsrhY0OvyRSyMwHftw3TTJQu/HHSSw71oADh2gQJEqUO1xLH8kbEx9ojLrAdj4MUzFMxn5DcnjWe0Jiqsd+9//x4a5bg/rN/0hh0PHAEG/fb95uqavQmss154DmTFoqEv77RlqXx9sT3G56iv7D8Ya9V6Te/+bL2JhOGedWhzOctgT636NrZrtfGzVgx4Ra2cNh+HJbJHJfRlHlUE8T0Jyjavn3f/cAgJ8B7DlvCxnlpooZq7HssITSmciIHf+rZaVBTWZZudO3D/rVQKwTE7x6fr78MgVH1D+o7ctIsIDyGZdIIE6/jYZrmBcAi34b03rK/uoaYs4t+ccij/j35KanSPr65SU1DfIQQSSBKn5d5zUXlxE3eodmo05N7pGyolCrcnudtTYJSLywaicTRZX3Buj0KfaoXQWMQuWb84jAlDC3Nh+bXjJyl5P0WnTSNl78Gt1l/govx//KIdseDZcrTqkJPtyI+xYbyjzz3nXv4HmcLpDVgj1pOrLAU7Ar40faHDJutbnGsjO9KvApXPUWpeUA6uHiyvmVtRHI="
+  skip_cleanup: true
+  on:
+    all_branches: true

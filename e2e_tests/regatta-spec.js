@@ -1,33 +1,38 @@
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 120000;
+var AngularPage = require('./page_objects/event_list.page.js');
 
+describe('The Regatta event list view', function() {
 
-describe('The Regatta welcome view', function() {
-  var heading = element(by.css('h1'));
-  var newRegattaForm = element(by.css('input'));
-  var addButton = element(by.buttonText('Add'));
-  var regattaList = element.all(by.css('.list-group-item')); // FIXME: not yet supported, element.all(by.repeater('let event of events'));
+  var page;
+  var initialEventListLength;
+
+  beforeAll(function(done) {
+    page = new AngularPage();
+    page.eventListLength.then((n) => {
+      initialEventListLength = n;
+      console.log("initialEventListLength:", initialEventListLength);
+      done()
+    })
+  });
 
   beforeEach(function() {
-    browser.get('http://localhost:8080/');
+    page = new AngularPage();
+  });
+
+  afterEach(function() {
   });
 
   it('should display the application\'s name.', function() {
-    expect(heading.getText()).toEqual('Regatta');
+    expect(page.heading).toEqual('Regatta');
   });
 
-  it('should start with an empty list.', function() {
-    expect(regattaList.count()).toEqual(0);
+  it('should display initial regatta items.', function() {
+    expect(page.eventListLength).toEqual(initialEventListLength);
   });
 
   it('should add a new regatta item.', function() {
-    newRegattaForm.sendKeys('Christmas Race');
-    addButton.click();
-
-    // FIXME: why do we need this hack? originally mentioned here: http://stackoverflow.com/questions/21748442/protractor-how-to-wait-for-page-complete-after-click-a-button
-    browser.driver.sleep(1);
-    browser.waitForAngular();
-
-    expect(regattaList.count()).toEqual(1);
+    page.typeIntoNewEventForm('Christmas Race');
+    page.clickAddButton();
+    expect(page.eventListLength).toEqual(initialEventListLength + 1);
   });
 
 /*
