@@ -18,8 +18,6 @@ dependencies:
   http: 0.11.3+9
   stream_transformers: 0.3.0+3
   firebase: 3.0.0
-  coverage: "^0.7.0"
-  dart_codecov_generator: "^0.4.0"
 
 dev_dependencies:
   test: 0.12.20+3
@@ -28,6 +26,8 @@ dev_dependencies:
   pageloader: 2.2.5
   mockito: 2.0.2
   angular_test: 1.0.0-alpha+6
+  coverage: any
+  dart_codecov_generator: any
 
 transformers:
   - sass_transformer
