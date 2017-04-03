@@ -26,7 +26,6 @@ dev_dependencies:
   pageloader: 2.2.5
   mockito: 2.0.2
   angular_test: 1.0.0-alpha+6
-  coverage: any
 
 transformers:
   - sass_transformer
