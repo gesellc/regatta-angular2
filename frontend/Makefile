@@ -22,8 +22,7 @@ test:
 	pub run test lib
 
 coveralls:
-	pub global activate dart_codecov_generator && \
-	pub global run dart_codecov_generator test/all_unit_tests_for_coverage.dart
+	pub run dart_codecov_generator --report-on=lib --verbose --no-html lib/models/person_test.dart
 
 tests:
 	# These are the browser tests with firefox
