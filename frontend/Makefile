@@ -22,7 +22,7 @@ test:
 	pub run test lib
 
 coveralls:
-	pub run dart_codecov_generator --report-on=lib --verbose --no-html test/all_unit_tests_for_coverage.dart && \
+	pub run dart_codecov_generator --report-on=. --verbose --no-html test/all_unit_tests_for_coverage.dart && \
 	bash <(curl -s https://codecov.io/bash)
 
 tests:
